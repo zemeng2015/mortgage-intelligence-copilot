@@ -10,46 +10,31 @@ This project is designed to show applied AI engineering strength: retrieval, cit
 
 Built a production-style mortgage research copilot using FastAPI, AWS-style workflow orchestration, document ingestion, vector retrieval, and citation-grounded LLM responses over financial documents.
 
-## Core Capabilities
+## Architecture
+
+```mermaid
+flowchart LR
+    Document[Mortgage document] --> Ingest[POST /documents]
+    Ingest --> Chunking[Chunking + metadata]
+    Chunking --> Store[In-memory RAG store]
+    Question[POST /ask] --> Retrieval[Lexical retrieval + filters]
+    Store --> Retrieval
+    Retrieval --> Generator[Local or OpenAI answer generator]
+    Generator --> Response[Answer + citations + confidence]
+    Response --> Trace[GET /runs/run_id]
+```
+
+## Implemented
 
 - Upload and ingest mortgage or housing research documents.
 - Parse documents into chunks with metadata.
 - Retrieve relevant chunks with a local lexical retriever.
 - Answer user questions with grounded citations.
-- Run agent tools such as document search, scenario comparison, and report generation.
-- Track latency, token usage, retrieval quality, and citation correctness.
-
-## Current Implementation
-
-This first version is a local-first RAG service that does not require an external
-LLM or vector database. It focuses on the backend mechanics that make a copilot
-credible: ingestion, chunking, retrieval, citations, confidence scoring, and API
-tests.
-
-- `POST /documents` ingests a mortgage or housing research document.
-- `GET /documents` lists ingested documents and chunk counts.
-- `POST /ask` retrieves matching chunks and returns a citation-grounded answer.
-- `GET /runs/{run_id}` returns retrieval and answer-generation trace details.
 - Metadata filters support scoped retrieval, such as region or report type.
 - `answer_mode` supports `local`, `openai`, and `auto`.
+- `GET /runs/{run_id}` returns retrieval and answer-generation trace details.
 - Unit tests cover health checks, ingestion, retrieval, filtering, citations, LLM
   provider wiring, and run traces.
-
-## Suggested Stack
-
-- Backend: FastAPI, Pydantic, SQLAlchemy
-- AI: OpenAI API or AWS Bedrock, LangGraph, sentence-transformers
-- Storage: Postgres + pgvector, S3-compatible object storage
-- Workflow: AWS Step Functions design, local orchestrator for development
-- Observability: structured logs, eval reports, cost tracking
-
-## Milestones
-
-1. Build local document ingestion and chunking.
-2. Add vector search with citation-grounded RAG.
-3. Add tool-calling agent workflow.
-4. Add evaluation dataset and regression runner.
-5. Add cloud deployment notes for AWS.
 
 ## Local Development
 
@@ -125,7 +110,31 @@ Inspect a run trace:
 Invoke-RestMethod -Uri http://127.0.0.1:8000/runs/{run_id}
 ```
 
-## Next Milestones
+## Example Response
+
+```json
+{
+  "answer_mode": "local",
+  "confidence": 0.75,
+  "citations": [
+    {
+      "document_id": "sample-housing-report",
+      "chunk_id": "sample-housing-report-0000",
+      "score": 0.75
+    }
+  ],
+  "retrieval_query": "What happened to borrower risk and delinquency?"
+}
+```
+
+## Interview Talking Points
+
+- Demonstrates a production RAG backend shape: ingestion, chunking, retrieval, citation response, and traceability.
+- Uses local-first retrieval so the system is testable without external infrastructure, while OpenAI generation is available through an optional provider.
+- Run traces expose retrieved chunks, latency, generation mode, and final answer for debugging and evaluation.
+- Metadata filters model enterprise document scoping, such as region, report type, or access policy.
+
+## Roadmap
 
 1. Replace lexical retrieval with embeddings and pgvector.
 2. Add citation validation against retrieved chunks.
